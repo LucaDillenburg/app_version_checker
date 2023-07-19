@@ -1,73 +1,109 @@
 import 'package:flutter/material.dart';
-import 'package:new_version/new_version.dart';
+import 'package:app_version_checker/app_version_checker.dart';
 
-void main() {
-  runApp(MyApp());
+final newVersion = AppVersionChecker(
+  iOSId: 'com.google.Vespa',
+  androidId: 'com.google.android.apps.cloudconsole',
+);
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final status = await newVersion.getVersionStatus();
+  if (status != null) {
+    debugPrint(status.releaseNotes);
+    debugPrint(status.appStoreLink);
+    debugPrint(status.localVersion.toVersionString());
+    debugPrint(status.storeVersion.toVersionString());
+    debugPrint(status.canUpdate.toString());
+  }
+
+  runApp(MyApp(status: status));
 }
 
 class MyApp extends StatelessWidget {
+  final AppVersions? status;
+  const MyApp({Key? key, required this.status}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: MyHomePage(),
+      home: Builder(
+        builder: (context) => InitStateWrapper(
+          onInitState: () {
+            final status = this.status;
+            if (status != null && status.canUpdate == true) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                showDialog(
+                  context: context,
+                  builder: (context) => Dialog(
+                    child: Container(
+                      padding: EdgeInsets.all(20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'There is an update available',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30),
+                          ),
+                          SizedBox(height: 10),
+                          MaterialButton(
+                            color: Colors.blue,
+                            onPressed: () => newVersion.launchAppStore(status.appStoreLink),
+                            child: Text('Update Now', style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              });
+            }
+          },
+          child: MyHomePage(),
+        ),
+      ),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
+// HOME
 
-class _MyHomePageState extends State<MyHomePage> {
-  @override
-  void initState() {
-    super.initState();
-
-    // Instantiate NewVersion manager object (Using GCP Console app as example)
-    final newVersion = NewVersion(
-      iOSId: 'com.google.Vespa',
-      androidId: 'com.google.android.apps.cloudconsole',
-    );
-
-    // You can let the plugin handle fetching the status and showing a dialog,
-    // or you can fetch the status and display your own dialog, or no dialog.
-    const simpleBehavior = true;
-
-    if (simpleBehavior) {
-      basicStatusCheck(newVersion);
-    } else {
-      advancedStatusCheck(newVersion);
-    }
-  }
-
-  basicStatusCheck(NewVersion newVersion) {
-    newVersion.showAlertIfNecessary(context: context);
-  }
-
-  advancedStatusCheck(NewVersion newVersion) async {
-    final status = await newVersion.getVersionStatus();
-    if (status != null) {
-      debugPrint(status.releaseNotes);
-      debugPrint(status.appStoreLink);
-      debugPrint(status.localVersion);
-      debugPrint(status.storeVersion);
-      debugPrint(status.canUpdate.toString());
-      newVersion.showUpdateDialog(
-        context: context,
-        versionStatus: status,
-        dialogTitle: 'Custom Title',
-        dialogText: 'Custom Text',
-      );
-    }
-  }
-
+class MyHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text("Example App"),
       ),
+      body: Center(
+        child: Text('Hello World'),
+      ),
     );
+  }
+}
+
+// UTILS
+
+class InitStateWrapper extends StatefulWidget {
+  final Function() onInitState;
+  final Widget child;
+  const InitStateWrapper({Key? key, required this.onInitState, required this.child}) : super(key: key);
+
+  @override
+  State<InitStateWrapper> createState() => _InitStateWrapperState();
+}
+
+class _InitStateWrapperState extends State<InitStateWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    widget.onInitState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }
