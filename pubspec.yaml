@@ -1,6 +1,6 @@
 name: app_version_checker
 description: Check if your user has the most recent version of your Flutter app.
-version: 0.3.1
+version: 0.5.0
 homepage: https://github.com/Luca/new_version
 
 environment:
