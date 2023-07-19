@@ -1,4 +1,4 @@
-library new_version;
+library app_version_checker;
 
 import 'dart:async';
 import 'dart:convert';
